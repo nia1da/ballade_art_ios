@@ -1,4 +1,4 @@
-package com.example.ballade_art
+package com.balladeart.ringsizer
 
 import io.flutter.embedding.android.FlutterActivity
 
