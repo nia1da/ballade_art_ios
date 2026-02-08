@@ -3,8 +3,9 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dpi_helper.dart';
+import 'responsive_helper.dart';
 import 'package:video_player/video_player.dart';
-import 'story_page.dart'; // <-- Bunu ekle
+import 'story_page.dart';
 
 // 🔹 Yüzük ölçü tablosu (EU formatında; eski 'us' değerleri aynen 'eu' alanına taşındı)
 final List<Map<String, dynamic>> sizeChart = [
@@ -97,24 +98,20 @@ class _HomePageState extends State<HomePage> {
   Map<String, double> dpi = {"xdpi": 0.0, "ydpi": 0.0};
   late bool isTurkish;
 
-
   @override
   void initState() {
     super.initState();
     final langCode = WidgetsBinding.instance.platformDispatcher.locale.languageCode;
-    isTurkish = langCode == 'tr';   // <-- dil tespiti buraya eklendi
-
+    isTurkish = langCode == 'tr';
     _loadDpi();
   }
 
   Future<void> _loadDpi() async {
     final result = await DpiHelper.getDpi();
-    if (!mounted) return; // clean guard
+    if (!mounted) return;
     setState(() => dpi = result);
   }
 
-
-  // 🔸 Seçili satırı görünür tut
   void _scrollToSelected() {
     final index = sizeChart.indexed.reduce((a, b) =>
     (a.$2['diameter'] - diameterMm).abs() <
@@ -122,7 +119,7 @@ class _HomePageState extends State<HomePage> {
         ? a
         : b).$1;
 
-    const double itemHeight = 64.0; // kart başına yaklaşık yükseklik
+    const double itemHeight = 64.0;
     final scrollOffset = _scrollController.offset;
     final viewHeight = _scrollController.position.viewportDimension;
     final targetOffset = index * itemHeight;
@@ -151,11 +148,12 @@ class _HomePageState extends State<HomePage> {
     });
     WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToSelected());
   }
+
   Future<void> _showHelpVideo() async {
     final controller = VideoPlayerController.asset('assets/videos/help.mp4');
 
     await controller.initialize();
-    if (!mounted) return; // <- profesyonel koruma
+    if (!mounted) return;
 
     controller
       ..setLooping(true)
@@ -168,7 +166,10 @@ class _HomePageState extends State<HomePage> {
         backgroundColor: const Color(0xFF222831),
         title: Text(
           isTurkish ? "Nasıl Kullanılır" : "How to Use",
-          style: const TextStyle(color: Color(0xFFDFD0B8)),
+          style: TextStyle(
+            color: const Color(0xFFDFD0B8),
+            fontSize: ResponsiveHelper.fontSize(context, 16),
+          ),
         ),
         content: AspectRatio(
           aspectRatio: controller.value.aspectRatio,
@@ -179,7 +180,10 @@ class _HomePageState extends State<HomePage> {
             onPressed: () => Navigator.pop(context),
             child: Text(
               isTurkish ? "Kapat" : "Close",
-              style: const TextStyle(color: Color(0xFFDFD0B8)),
+              style: TextStyle(
+                color: const Color(0xFFDFD0B8),
+                fontSize: ResponsiveHelper.fontSize(context, 14),
+              ),
             ),
           ),
         ],
@@ -189,37 +193,40 @@ class _HomePageState extends State<HomePage> {
     controller.dispose();
   }
 
-
   Future<void> _shareOnWhatsApp(String message) async {
     final url = Uri.parse("https://wa.me/?text=${Uri.encodeComponent(message)}");
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
     }
-  }//KILL ME NOW
+  }
 
   @override
-  Widget build(BuildContext context) {
-    if (dpi["xdpi"] == 0.0) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
+Widget build(BuildContext context) {
+  if (dpi["xdpi"] == 0.0) {
+    // DPI is preloaded by main.dart, this rarely shows
+    // But we keep it for development hot-reload support
+    return const Scaffold(
+      backgroundColor: Color(0xFF222831),
+      body: Center(
+        child: SizedBox.shrink(), // Empty - native splash still visible
+      ),
+    );
+  }
 
     final xdpi = dpi["xdpi"]!;
     final dpr = MediaQuery.of(context).devicePixelRatio;
 
-    // halka ölçüleri (dp)
-    final maxDiameterDp =
-        DpiHelper.mmToDp(mm: maxDiameter, dpi: xdpi, dpr: dpr) + 40;
-    final currentDiameterDp =
-    DpiHelper.mmToDp(mm: diameterMm, dpi: xdpi, dpr: dpr);
+    // ✅ CRITICAL: Ring sizer logic UNCHANGED - exact millimeter calculation
+    final maxDiameterDp = DpiHelper.mmToDp(mm: maxDiameter, dpi: xdpi, dpr: dpr) + 40;
+    final currentDiameterDp = DpiHelper.mmToDp(mm: diameterMm, dpi: xdpi, dpr: dpr);
 
-    // en yakın index
     final closestIndex = sizeChart.indexed.reduce((a, b) =>
     (a.$2['diameter'] - diameterMm).abs() <
         (b.$2['diameter'] - diameterMm).abs()
         ? a
         : b).$1;
+
+    final isCompact = ResponsiveHelper.isCompactScreen(context);
 
     return Scaffold(
       backgroundColor: const Color(0xFF222831),
@@ -228,31 +235,32 @@ class _HomePageState extends State<HomePage> {
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           child: Column(
             children: [
-              const SizedBox(height: 16),
+              SizedBox(height: ResponsiveHelper.spacing(context, 4)),
+              
+              // ✅ Title with responsive font
               InkWell(
                 onTap: () {
-                  // Yazıya basılınca Hikaye Sayfasına git
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => const StoryPage()),
                   );
                 },
                 child: Padding(
-                  padding: const EdgeInsets.all(8.0), // Tıklama alanı biraz geniş olsun
+                  padding: const EdgeInsets.all(4.0),
                   child: Text(
                     "BALLADEART",
                     style: GoogleFonts.cinzel(
-                      fontSize: 28,
+                      fontSize: ResponsiveHelper.fontSize(context, 28, maxSize: 32),
                       letterSpacing: 4,
                       color: const Color(0xFFDFD0B8),
-                      fontWeight: FontWeight.bold, // Biraz daha belirgin olsun
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
+              
+              SizedBox(height: ResponsiveHelper.spacing(context, 16)),
 
-              // 🔹 kutu + halka + ikonlar
+              // ✅ Ring sizer box - LOGIC UNCHANGED
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -265,8 +273,7 @@ class _HomePageState extends State<HomePage> {
                       colorFilter: const ColorFilter.mode(Color(0xFFDFD0B8), BlendMode.srcIn),
                     ),
                   ),
-
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 24),
                   Stack(
                     alignment: Alignment.center,
                     children: [
@@ -289,7 +296,7 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ],
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 24),
                   IconButton(
                     onPressed: () {
                       final item = sizeChart[closestIndex];
@@ -306,35 +313,29 @@ class _HomePageState extends State<HomePage> {
                       colorFilter: const ColorFilter.mode(Color(0xFFDFD0B8), BlendMode.srcIn),
                     ),
                   ),
-
-
                 ],
               ),
 
-              const SizedBox(height: 16),
+              SizedBox(height: ResponsiveHelper.spacing(context, 16)),
 
-              // 🔹 slider + oklar
+              // ✅ Slider with responsive spacing
               Row(
                 children: [
                   IconButton(
                     onPressed: _stepBackward,
-                    icon: const Icon(Icons.chevron_left,
-                        color: Color(0xFFDFD0B8)),
+                    icon: const Icon(Icons.chevron_left, color: Color(0xFFDFD0B8)),
                   ),
                   Expanded(
                     child: Slider(
                       activeColor: const Color(0xFFDFD0B8),
-                      inactiveColor:
-                      const Color(0xFFDFD0B8).withValues(alpha: 0.6),
+                      inactiveColor: const Color(0xFFDFD0B8).withValues(alpha: 0.6),
                       value: diameterMm,
                       min: minDiameter,
                       max: maxDiameter,
-
                       onChanged: (value) {
                         setState(() {
                           diameterMm = value;
                         });
-                        // seçili satırı görünür tut
                         WidgetsBinding.instance
                             .addPostFrameCallback((_) => _scrollToSelected());
                       },
@@ -342,30 +343,31 @@ class _HomePageState extends State<HomePage> {
                   ),
                   IconButton(
                     onPressed: _stepForward,
-                    icon: const Icon(Icons.chevron_right,
-                        color: Color(0xFFDFD0B8)),
+                    icon: const Icon(Icons.chevron_right, color: Color(0xFFDFD0B8)),
                   ),
                 ],
               ),
 
-              const SizedBox(height: 8),
+              SizedBox(height: ResponsiveHelper.spacing(context, 12)),
 
+              // ✅ Size Chart Title
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
                     isTurkish ? "Ölçü Tablosu" : "Size Chart",
-                    style: const TextStyle(
-                      color: Color(0xFFDFD0B8),
-                      fontSize: 18,
+                    style: TextStyle(
+                      color: const Color(0xFFDFD0B8),
+                      fontSize: ResponsiveHelper.fontSize(context, 18),
                     ),
                   ),
                 ),
               ),
 
-              const SizedBox(height: 8),
-              // --- sütun başlıkları (liste üstü) ---
+              SizedBox(height: ResponsiveHelper.spacing(context, 8)),
+
+              // ✅ Column headers with responsive font
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Container(
@@ -379,42 +381,39 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
                   ),
-                  child:  Row(
+                  child: Row(
                     children: [
-                      // Size
                       Expanded(
                         child: Text(
                           isTurkish ? "Ölçü" : "Size",
-                          style : TextStyle(
-                            color: Color(0xFFDFD0B8),
+                          style: TextStyle(
+                            color: const Color(0xFFDFD0B8),
                             fontWeight: FontWeight.w600,
-                            fontSize: 10,
+                            fontSize: ResponsiveHelper.fontSize(context, 10),
                           ),
                         ),
                       ),
-                      // Diameter (mm)
                       Expanded(
                         child: Center(
                           child: Text(
                             isTurkish ? "Çap" : "Diameter",
                             style: TextStyle(
-                              color: Color(0xFFDFD0B8),
+                              color: const Color(0xFFDFD0B8),
                               fontWeight: FontWeight.w600,
-                              fontSize: 10,
+                              fontSize: ResponsiveHelper.fontSize(context, 10),
                             ),
                           ),
                         ),
                       ),
-                      // Circumference (mm)
                       Expanded(
                         child: Align(
                           alignment: Alignment.centerRight,
                           child: Text(
                             isTurkish ? "Çevre" : "Circumference",
                             style: TextStyle(
-                              color: Color(0xFFDFD0B8),
+                              color: const Color(0xFFDFD0B8),
                               fontWeight: FontWeight.w600,
-                              fontSize: 10,
+                              fontSize: ResponsiveHelper.fontSize(context, 10),
                             ),
                           ),
                         ),
@@ -423,10 +422,10 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
               ),
-              const SizedBox(height: 8),
 
+              SizedBox(height: ResponsiveHelper.spacing(context, 8)),
 
-              // 🔹 liste
+              // ✅ List with responsive item font
               Expanded(
                 child: ListView.builder(
                   controller: _scrollController,
@@ -444,61 +443,69 @@ class _HomePageState extends State<HomePage> {
                             .addPostFrameCallback((_) => _scrollToSelected());
                       },
                       child: Container(
-                        margin: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 6),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 12),
+                        margin: EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: isCompact ? 4 : 6,
+                        ),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: isCompact ? 10 : 12,
+                        ),
                         decoration: BoxDecoration(
-                          border:
-                          Border.all(color: const Color(0xFFDFD0B8)),
+                          border: Border.all(color: const Color(0xFFDFD0B8)),
                           borderRadius: BorderRadius.circular(8),
                           color: isSelected
-                              ? const Color(0xFFDFD0B8)
-                              .withValues(alpha: 0.1)
+                              ? const Color(0xFFDFD0B8).withValues(alpha: 0.1)
                               : Colors.transparent,
                         ),
                         child: Row(
                           children: [
-                            // 1) Size (EU) - sola hizalı
                             Expanded(
                               child: Text(
                                 "${item['eu']}",
-                                style: const TextStyle(color: Color(0xFFDFD0B8), fontSize: 18),
+                                style: TextStyle(
+                                  color: const Color(0xFFDFD0B8),
+                                  fontSize: ResponsiveHelper.fontSize(context, 18),
+                                ),
                               ),
                             ),
-
-                            // 2) Diameter (mm) - ortalı
                             Expanded(
                               child: Center(
                                 child: Text(
                                   "${item['diameter']}",
-                                  style: const TextStyle(color: Color(0xFFDFD0B8), fontSize: 18),
+                                  style: TextStyle(
+                                    color: const Color(0xFFDFD0B8),
+                                    fontSize: ResponsiveHelper.fontSize(context, 18),
+                                  ),
                                 ),
                               ),
                             ),
-
-                            // 3) Circumference (mm) - sağa hizalı
                             Expanded(
                               child: Align(
                                 alignment: Alignment.centerRight,
                                 child: Text(
                                   "${item['circumference']}",
-                                  style: const TextStyle(color: Color(0xFFDFD0B8), fontSize: 18),
+                                  style: TextStyle(
+                                    color: const Color(0xFFDFD0B8),
+                                    fontSize: ResponsiveHelper.fontSize(context, 18),
+                                  ),
                                 ),
                               ),
                             ),
                           ],
                         ),
-
                       ),
                     );
                   },
                 ),
               ),
 
-              // 🔹 alt ikonlar
+              // ✅ Bottom icons with responsive spacing
               Padding(
-                padding: const EdgeInsets.only(bottom: 16, top: 24),
+                padding: EdgeInsets.only(
+                  bottom: ResponsiveHelper.spacing(context, 0),
+                  top: ResponsiveHelper.spacing(context, 16),
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [

@@ -111,6 +111,14 @@ class DpiHelper {
     return 160.0;
   }
 
+  /// ⚠️ BACKWARD COMPATIBILITY WRAPPER
+  /// home_page.dart'ın eski `getDpi()` çağrısını kırmamak için eklendi.
+  /// xdpi ve ydpi'nin aynı değeri döndürür (iOS'ta ekran kare piksellerdir).
+  static Future<Map<String, double>> getDpi() async {
+    final ppi = await getDevicePPI();
+    return {"xdpi": ppi, "ydpi": ppi};
+  }
+
   /// Tasarımda milimetre kullanmak için çevirici fonksiyon
   static double mmToDp({required double mm, required double dpi, required double dpr}) {
     // Formül: (mm * ppi / 25.4) / device_pixel_ratio

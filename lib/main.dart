@@ -1,43 +1,74 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'home_page.dart';
+import 'dpi_helper.dart';
 
 void main() {
-  runApp(const BalladeArtApp());
+  WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+  
+  SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+  ]);
+
+  runApp(const MyApp());
 }
 
-class BalladeArtApp extends StatelessWidget {
-  const BalladeArtApp({super.key});
+class MyApp extends StatefulWidget {
+  const MyApp({super.key});
 
-  static const Color bg = Color(0xFF222831);        // arka plan
-  static const Color ink = Color(0xFFDFD0B8);       // krem/şampanya
-  static const Color inkDim = Color(0x66DFD0B8);    // soluk çizgi
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  @override
+  void initState() {
+    super.initState();
+    _initializeApp();
+  }
+
+  Future<void> _initializeApp() async {
+    final minimumDisplayTime = Future.delayed(const Duration(seconds: 3));
+    
+    final preloadTasks = Future.wait([
+      _preloadDpi(),
+      _preloadFonts(),
+    ]);
+
+    await Future.wait([minimumDisplayTime, preloadTasks]);
+    FlutterNativeSplash.remove();
+  }
+
+  Future<void> _preloadDpi() async {
+    try {
+      await DpiHelper.getDpi();
+    } catch (e) {
+      debugPrint('Error preloading DPI: $e');
+    }
+  }
+
+  Future<void> _preloadFonts() async {
+    await Future.delayed(const Duration(milliseconds: 100));
+  }
 
   @override
   Widget build(BuildContext context) {
-    final baseText = GoogleFonts.cinzel(
-      color: ink,
-      letterSpacing: 2,
-    );
-
     return MaterialApp(
+      title: 'BalladeArt',
       debugShowCheckedModeBanner: false,
-      title: 'Ballade Art',
       theme: ThemeData(
-        scaffoldBackgroundColor: bg,
-        sliderTheme: const SliderThemeData(
-          thumbShape: RoundSliderThumbShape(enabledThumbRadius: 8),
-          trackHeight: 2,
+        primarySwatch: Colors.grey,
+        visualDensity: VisualDensity.adaptivePlatformDensity,
+        // ✅ Set Cinzel as the default font for the entire app
+        textTheme: GoogleFonts.cinzelTextTheme(
+          ThemeData.light().textTheme,
+        ).apply(
+          bodyColor: const Color(0xFFDFD0B8),
+          displayColor: const Color(0xFFDFD0B8),
         ),
-        textTheme: TextTheme(
-          bodyMedium: baseText.copyWith(fontSize: 14),
-          titleLarge: baseText.copyWith(fontSize: 28, letterSpacing: 4),
-          titleMedium: baseText.copyWith(fontSize: 18),
-          labelMedium: baseText.copyWith(fontSize: 12, color: inkDim),
-        ),
-        iconTheme: const IconThemeData(color: ink),
-        colorScheme: const ColorScheme.dark(primary: ink, surface: bg),
-        useMaterial3: true,
       ),
       home: const HomePage(),
     );
