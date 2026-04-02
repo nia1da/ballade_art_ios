@@ -33,6 +33,7 @@ dependencies:
   flutter_svg: ^2.0.9   # (en güncel sürümü kullanabilirsin)
   video_player: ^2.9.1
   device_info_plus: ^10.1.0
+  flutter_native_splash: ^2.4.0
 
 
   # The following adds the Cupertino Icons font to your application.
@@ -51,7 +52,6 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
-  flutter_native_splash: ^2.4.0
   flutter_launcher_icons: ^0.13.1
 
 flutter_launcher_icons:

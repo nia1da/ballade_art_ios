@@ -113,22 +113,19 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _scrollToSelected() {
-    final index = sizeChart.indexed.reduce((a, b) =>
-    (a.$2['diameter'] - diameterMm).abs() <
-        (b.$2['diameter'] - diameterMm).abs()
-        ? a
-        : b).$1;
+    final index = sizeChart.indexed.reduce(
+      (a, b) =>
+          (a.$2['diameter'] - diameterMm).abs() < (b.$2['diameter'] - diameterMm).abs() ? a : b,
+    ).$1;
 
     const double itemHeight = 64.0;
     final scrollOffset = _scrollController.offset;
     final viewHeight = _scrollController.position.viewportDimension;
     final targetOffset = index * itemHeight;
 
-    if (targetOffset < scrollOffset ||
-        targetOffset > scrollOffset + viewHeight - itemHeight) {
+    if (targetOffset < scrollOffset || targetOffset > scrollOffset + viewHeight - itemHeight) {
       _scrollController.animateTo(
-        (targetOffset - viewHeight / 2)
-            .clamp(0.0, _scrollController.position.maxScrollExtent),
+        (targetOffset - viewHeight / 2).clamp(0.0, _scrollController.position.maxScrollExtent),
         duration: const Duration(milliseconds: 350),
         curve: Curves.easeOut,
       );
@@ -148,50 +145,61 @@ class _HomePageState extends State<HomePage> {
     });
     WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToSelected());
   }
-
+  
   Future<void> _showHelpVideo() async {
     final controller = VideoPlayerController.asset('assets/videos/help.mp4');
 
-    await controller.initialize();
-    if (!mounted) return;
+    try {
+      await controller.initialize();
+      if (!mounted) return;
 
-    controller
-      ..setLooping(true)
-      ..play();
+      controller
+        ..setLooping(true)
+        ..play();
 
-    await showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => AlertDialog(
-        backgroundColor: const Color(0xFF222831),
-        title: Text(
-          isTurkish ? "Nasıl Kullanılır" : "How to Use",
-          style: TextStyle(
-            color: const Color(0xFFDFD0B8),
-            fontSize: ResponsiveHelper.fontSize(context, 16),
-          ),
-        ),
-        content: AspectRatio(
-          aspectRatio: controller.value.aspectRatio,
-          child: VideoPlayer(controller),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              isTurkish ? "Kapat" : "Close",
-              style: TextStyle(
-                color: const Color(0xFFDFD0B8),
-                fontSize: ResponsiveHelper.fontSize(context, 14),
-              ),
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => AlertDialog(
+          backgroundColor: const Color(0xFF222831),
+          title: Text(
+            isTurkish ? "Nasıl Kullanılır" : "How to Use",
+            style: TextStyle(
+              color: const Color(0xFFDFD0B8),
+              fontSize: ResponsiveHelper.fontSize(context, 16),
             ),
           ),
-        ],
-      ),
-    );
+          content: AspectRatio(
+            aspectRatio: controller.value.aspectRatio,
+            child: VideoPlayer(controller),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                // ✅ Stop playback before closing dialog
+                try {
+                  await controller.pause();
+                } catch (_) {}
 
-    controller.dispose();
+                // ✅ Use the dialog's own context (fixes async context lint)
+                if (dialogContext.mounted) Navigator.pop(dialogContext);
+              },
+              child: Text(
+                isTurkish ? "Kapat" : "Close",
+                style: TextStyle(
+                  color: const Color(0xFFDFD0B8),
+                  fontSize: ResponsiveHelper.fontSize(context, 14),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      controller.dispose();
+    }
   }
+  
 
   Future<void> _shareOnWhatsApp(String message) async {
     final url = Uri.parse("https://wa.me/?text=${Uri.encodeComponent(message)}");
@@ -201,17 +209,18 @@ class _HomePageState extends State<HomePage> {
   }
 
   @override
-Widget build(BuildContext context) {
-  if (dpi["xdpi"] == 0.0) {
-    // DPI is preloaded by main.dart, this rarely shows
-    // But we keep it for development hot-reload support
-    return const Scaffold(
-      backgroundColor: Color(0xFF222831),
-      body: Center(
-        child: SizedBox.shrink(), // Empty - native splash still visible
-      ),
-    );
-  }
+  Widget build(BuildContext context) {
+    if (dpi["xdpi"] == 0.0) {
+      // ✅ Review'da "boş ekran" gibi görünmesin
+      return const Scaffold(
+        backgroundColor: Color(0xFF222831),
+        body: Center(
+          child: CircularProgressIndicator(
+            color: Color(0xFFDFD0B8),
+          ),
+        ),
+      );
+    }
 
     final xdpi = dpi["xdpi"]!;
     final dpr = MediaQuery.of(context).devicePixelRatio;
@@ -220,11 +229,10 @@ Widget build(BuildContext context) {
     final maxDiameterDp = DpiHelper.mmToDp(mm: maxDiameter, dpi: xdpi, dpr: dpr) + 40;
     final currentDiameterDp = DpiHelper.mmToDp(mm: diameterMm, dpi: xdpi, dpr: dpr);
 
-    final closestIndex = sizeChart.indexed.reduce((a, b) =>
-    (a.$2['diameter'] - diameterMm).abs() <
-        (b.$2['diameter'] - diameterMm).abs()
-        ? a
-        : b).$1;
+    final closestIndex = sizeChart.indexed.reduce(
+      (a, b) =>
+          (a.$2['diameter'] - diameterMm).abs() < (b.$2['diameter'] - diameterMm).abs() ? a : b,
+    ).$1;
 
     final isCompact = ResponsiveHelper.isCompactScreen(context);
 
@@ -236,8 +244,6 @@ Widget build(BuildContext context) {
           child: Column(
             children: [
               SizedBox(height: ResponsiveHelper.spacing(context, 4)),
-              
-              // ✅ Title with responsive font
               InkWell(
                 onTap: () {
                   Navigator.push(
@@ -257,15 +263,12 @@ Widget build(BuildContext context) {
                   ),
                 ),
               ),
-              
               SizedBox(height: ResponsiveHelper.spacing(context, 16)),
-
-              // ✅ Ring sizer box - LOGIC UNCHANGED
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   IconButton(
-                    onPressed: () => _showHelpVideo(),
+                    onPressed: _showHelpVideo,
                     icon: SvgPicture.asset(
                       "assets/icons/help.svg",
                       width: 45,
@@ -282,16 +285,14 @@ Widget build(BuildContext context) {
                         width: maxDiameterDp,
                         height: maxDiameterDp,
                         fit: BoxFit.contain,
-                        colorFilter: const ColorFilter.mode(
-                            Color(0xFFDFD0B8), BlendMode.srcIn),
+                        colorFilter: const ColorFilter.mode(Color(0xFFDFD0B8), BlendMode.srcIn),
                       ),
                       Container(
                         width: currentDiameterDp,
                         height: currentDiameterDp,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          border: Border.all(
-                              color: const Color(0xFFDFD0B8), width: 1.8),
+                          border: Border.all(color: const Color(0xFFDFD0B8), width: 1.8),
                         ),
                       ),
                     ],
@@ -303,7 +304,6 @@ Widget build(BuildContext context) {
                       final message = isTurkish
                           ? "Yüzük ölçüm sonucu:\nÖlçü: ${item['eu']}\nÇap: ${item['diameter']} mm\nÇevre: ${item['circumference']} mm"
                           : "Ring size result:\nSize: ${item['eu']}\nDiameter: ${item['diameter']} mm\nCircumference: ${item['circumference']} mm";
-
                       _shareOnWhatsApp(message);
                     },
                     icon: SvgPicture.asset(
@@ -315,10 +315,7 @@ Widget build(BuildContext context) {
                   ),
                 ],
               ),
-
               SizedBox(height: ResponsiveHelper.spacing(context, 16)),
-
-              // ✅ Slider with responsive spacing
               Row(
                 children: [
                   IconButton(
@@ -336,8 +333,7 @@ Widget build(BuildContext context) {
                         setState(() {
                           diameterMm = value;
                         });
-                        WidgetsBinding.instance
-                            .addPostFrameCallback((_) => _scrollToSelected());
+                        WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToSelected());
                       },
                     ),
                   ),
@@ -347,10 +343,7 @@ Widget build(BuildContext context) {
                   ),
                 ],
               ),
-
               SizedBox(height: ResponsiveHelper.spacing(context, 12)),
-
-              // ✅ Size Chart Title
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Align(
@@ -364,10 +357,7 @@ Widget build(BuildContext context) {
                   ),
                 ),
               ),
-
               SizedBox(height: ResponsiveHelper.spacing(context, 8)),
-
-              // ✅ Column headers with responsive font
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Container(
@@ -422,10 +412,7 @@ Widget build(BuildContext context) {
                   ),
                 ),
               ),
-
               SizedBox(height: ResponsiveHelper.spacing(context, 8)),
-
-              // ✅ List with responsive item font
               Expanded(
                 child: ListView.builder(
                   controller: _scrollController,
@@ -439,24 +426,15 @@ Widget build(BuildContext context) {
                         setState(() {
                           diameterMm = item['diameter'];
                         });
-                        WidgetsBinding.instance
-                            .addPostFrameCallback((_) => _scrollToSelected());
+                        WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToSelected());
                       },
                       child: Container(
-                        margin: EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: isCompact ? 4 : 6,
-                        ),
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: isCompact ? 10 : 12,
-                        ),
+                        margin: EdgeInsets.symmetric(horizontal: 16, vertical: isCompact ? 4 : 6),
+                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: isCompact ? 10 : 12),
                         decoration: BoxDecoration(
                           border: Border.all(color: const Color(0xFFDFD0B8)),
                           borderRadius: BorderRadius.circular(8),
-                          color: isSelected
-                              ? const Color(0xFFDFD0B8).withValues(alpha: 0.1)
-                              : Colors.transparent,
+                          color: isSelected ? const Color(0xFFDFD0B8).withValues(alpha: 0.1) : Colors.transparent,
                         ),
                         child: Row(
                           children: [
@@ -499,8 +477,6 @@ Widget build(BuildContext context) {
                   },
                 ),
               ),
-
-              // ✅ Bottom icons with responsive spacing
               Padding(
                 padding: EdgeInsets.only(
                   bottom: ResponsiveHelper.spacing(context, 0),
@@ -511,8 +487,7 @@ Widget build(BuildContext context) {
                   children: [
                     InkWell(
                       onTap: () async {
-                        final url = Uri.parse(
-                            "https://www.instagram.com/balladeart?igsh=Z3B6bHV5OWd4MXFw");
+                        final url = Uri.parse("https://www.instagram.com/balladeart?igsh=Z3B6bHV5OWd4MXFw");
                         if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
                           debugPrint("❌ Instagram linki açılamadı: $url");
                         }
@@ -520,8 +495,7 @@ Widget build(BuildContext context) {
                       child: SvgPicture.asset(
                         "assets/icons/insta.svg",
                         width: 32,
-                        colorFilter: const ColorFilter.mode(
-                            Color(0xFFDFD0B8), BlendMode.srcIn),
+                        colorFilter: const ColorFilter.mode(Color(0xFFDFD0B8), BlendMode.srcIn),
                       ),
                     ),
                     InkWell(
@@ -534,24 +508,20 @@ Widget build(BuildContext context) {
                       child: SvgPicture.asset(
                         "assets/icons/website.svg",
                         width: 32,
-                        colorFilter: const ColorFilter.mode(
-                            Color(0xFFDFD0B8), BlendMode.srcIn),
+                        colorFilter: const ColorFilter.mode(Color(0xFFDFD0B8), BlendMode.srcIn),
                       ),
                     ),
                     InkWell(
                       onTap: () async {
-                        final url = Uri.parse(
-                            "https://maps.app.goo.gl/3FNax1PRdAbcfiPN7");
+                        final url = Uri.parse("https://maps.app.goo.gl/3FNax1PRdAbcfiPN7");
                         if (await canLaunchUrl(url)) {
-                          await launchUrl(url,
-                              mode: LaunchMode.externalApplication);
+                          await launchUrl(url, mode: LaunchMode.externalApplication);
                         }
                       },
                       child: SvgPicture.asset(
                         "assets/icons/location.svg",
                         width: 30,
-                        colorFilter: const ColorFilter.mode(
-                            Color(0xFFDFD0B8), BlendMode.srcIn),
+                        colorFilter: const ColorFilter.mode(Color(0xFFDFD0B8), BlendMode.srcIn),
                       ),
                     ),
                   ],

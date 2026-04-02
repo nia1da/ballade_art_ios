@@ -5,11 +5,12 @@ import 'package:google_fonts/google_fonts.dart';
 import 'home_page.dart';
 import 'dpi_helper.dart';
 
-void main() {
+void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
-  
-  SystemChrome.setPreferredOrientations([
+
+  // ✅ Daha deterministic
+  await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
   ]);
 
@@ -17,7 +18,10 @@ void main() {
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({super.key});
+  /// Testlerde pending Timer kalmasın diye splash gecikmelerini kapatmak için.
+  final bool disableSplashDelays;
+
+  const MyApp({super.key, this.disableSplashDelays = false});
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -31,15 +35,23 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> _initializeApp() async {
-    final minimumDisplayTime = Future.delayed(const Duration(seconds: 3));
-    
-    final preloadTasks = Future.wait([
-      _preloadDpi(),
-      _preloadFonts(),
-    ]);
+    try {
+      final minimumDisplayTime = widget.disableSplashDelays
+          ? Future<void>.value()
+          : Future.delayed(const Duration(seconds: 3));
 
-    await Future.wait([minimumDisplayTime, preloadTasks]);
-    FlutterNativeSplash.remove();
+      final preloadTasks = Future.wait([
+        _preloadDpi(),
+        _preloadFonts(),
+      ]);
+
+      await Future.wait([minimumDisplayTime, preloadTasks]);
+    } catch (e) {
+      debugPrint('Initialize error: $e');
+    } finally {
+      // ✅ Splash asla takılı kalmasın
+      FlutterNativeSplash.remove();
+    }
   }
 
   Future<void> _preloadDpi() async {
@@ -51,6 +63,7 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> _preloadFonts() async {
+    if (widget.disableSplashDelays) return;
     await Future.delayed(const Duration(milliseconds: 100));
   }
 
@@ -62,7 +75,6 @@ class _MyAppState extends State<MyApp> {
       theme: ThemeData(
         primarySwatch: Colors.grey,
         visualDensity: VisualDensity.adaptivePlatformDensity,
-        // ✅ Set Cinzel as the default font for the entire app
         textTheme: GoogleFonts.cinzelTextTheme(
           ThemeData.light().textTheme,
         ).apply(
