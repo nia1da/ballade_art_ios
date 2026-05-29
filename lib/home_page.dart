@@ -209,6 +209,12 @@ class _HomePageState extends State<HomePage> {
   }
 
   @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     if (dpi["xdpi"] == 0.0) {
       // ✅ Review'da "boş ekran" gibi görünmesin
