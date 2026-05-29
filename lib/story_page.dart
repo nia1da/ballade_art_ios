@@ -31,12 +31,12 @@ class _StoryPageState extends State<StoryPage> {
         "tr": {
           "title": "USTANIN ELİ",
           "text":
-              "Ben Alper Karabak. Lisede ve üniversitede Kuyumculuk ve Takı Tasarımı okudum. Yirmi yedi yıldır hiç durmadan, mesleğimi ilk günkü heyecanımla öğrenmeye ve icra etmeye d[...]"
+              "Ben Alper Karabak. Lisede ve üniversitede Kuyumculuk ve Takı Tasarımı okudum. Yirmi yedi yıldır hiç durmadan, mesleğimi ilk günkü heyecanımla öğrenmeye ve icra etmeye devam ediyorum. 2012 yılında, bugün hâlâ faaliyet gösterdiğimiz BalladeArt’ı kurdum. Ballade, sevdiğim bir Chopin eseridir. İnsanların hikâyelerini sadece fonetik sanatlarla değil, görsel sanatlarla da ifade edilebileceğini düşünerek atölyeme adını verdim."
         },
         "en": {
           "title": "THE MASTER'S HAND",
           "text":
-              "I am Alper Karabak. I studied Jewelry Design in high school and university. For twenty-seven years, I have been practicing my profession with the same excitement as the first day. I[...]"
+              "am Alper Karabak. I studied Jewelry Design in high school and university. For twenty-seven years, I have been practicing my profession with the same excitement as the first day. In 2012, I founded BalladeArt, inspired by a Chopin piece I love. I named my workshop 'Ballade' believing that people's stories can be expressed not just through music, but through visual arts as well."
         }
       },
       {
@@ -48,12 +48,12 @@ class _StoryPageState extends State<StoryPage> {
         "tr": {
           "title": "BİRLİKTE YARATIM",
           "text":
-              "BalladeArt’ta insanların hikâyelerini semboller ve görsel vurgularla takılabilir hâle getirmek gibi bir derdimiz var. Bu yolculukta hayat arkadaşım Cansu Karabak ile birlik[...]"
+              "BalladeArt’ta insanların hikâyelerini semboller ve görsel vurgularla takılabilir hâle getirmek gibi bir derdimiz var. Bu yolculukta hayat arkadaşım Cansu Karabak ile birlikteyiz. Bildiklerimi kendisine aktardım o da daha minimalist şeyler yaparak atölyemize zarafet kazandırdı. Şimdi hem üretiyor hem de markamızın dijital dünyasını yönetiyor."
         },
         "en": {
           "title": "CO-CREATION",
           "text":
-              "At BalladeArt, our mission is to turn people's stories into wearable art using symbols. I am on this journey with my life partner, Cansu Karabak. I taught her everything I know step[...]"
+              "At BalladeArt, our mission is to turn people's stories into wearable art using symbols. I am on this journey with my life partner, Cansu Karabak. I taught her everything I know step by step. Cansu developed a minimalist style different from mine, adding elegance to our workshop. Now, she both creates and manages the digital world of our brand."
         }
       },
       {
@@ -65,12 +65,12 @@ class _StoryPageState extends State<StoryPage> {
         "tr": {
           "title": "SAF ZANAAT",
           "text":
-              "Yüzükler, kolyeler, taçlar, kemer tokaları ve minimal heykeller çalışıyoruz. Kıymetli metal ve taşla çalışma konusunda sınırları zorluyoruz. Biz genelde 3D modelleme[...]"
+              "We work on rings, necklaces, crowns, belt buckles, and minimal sculptures, pushing the boundaries with precious metals and stones. We generally do not use 3D modeling; we work with our minds, experience, and hands. Our character is defined by designs with an antique look, matte textures, and a sense of history."
         },
         "en": {
           "title": "PURE CRAFT",
           "text":
-              "We work on rings, necklaces, crowns, belt buckles, and minimal sculptures, pushing the boundaries with precious metals and stones. We generally do not use 3D modeling; we work with [...]"
+              "We work on rings, necklaces, crowns, belt buckles, and minimal sculptures, pushing the boundaries with precious metals and stones. We generally do not use 3D modeling; we work with our minds, experience, and hands. Our character is defined by designs with an antique look, matte textures, and a sense of history."
         }
       },
       {
@@ -82,12 +82,12 @@ class _StoryPageState extends State<StoryPage> {
         "tr": {
           "title": "BALLADE'IN RUHU",
           "text":
-              "Seri üretim ürünleri çalışmayı tarzımıza ve etiğimize uygun bulmuyoruz. Müşterilerimiz bir konsept ya da hikâye ile gelir, istişare ederek tasarımın hatlarını beli[...]"
+              "Seri üretim ürünleri çalışmayı tarzımıza ve etiğimize uygun bulmuyoruz. Müşterilerimiz bir konsept ya da hikâye ile gelir, istişare ederek tasarımın hatlarını belirleriz. Gerekli durumlarda fotoğraf ve video ile fikirlerini alır, üretime dahil ederiz. Bu süreç vakit alsa da, ortaya çıkan bağ ve müşterimizin heyecanı için bunu severek tercih ediyoruz."
         },
         "en": {
           "title": "BALLADE'S SOUL",
           "text":
-              "We do not find mass production suitable for our style or ethics. Our clients come with a concept or story; we consult and determine the design together. When necessary, we get their[...]"
+              "We do not find mass production suitable for our style or ethics. Our clients come with a concept or story; we consult and determine the design together. When necessary, we get their feedback via photos and videos, involving them in production. Although this takes time, we prefer it for the bond it creates and the excitement it brings to our customers."
         }
       },
     ];

@@ -98,6 +98,9 @@ class _HomePageState extends State<HomePage> {
   Map<String, double> dpi = {"xdpi": 0.0, "ydpi": 0.0};
   late bool isTurkish;
 
+  static const Color _bg = Color(0xFF222831);
+  static const Color _ink = Color(0xFFDFD0B8);
+
   @override
   void initState() {
     super.initState();
@@ -145,7 +148,7 @@ class _HomePageState extends State<HomePage> {
     });
     WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToSelected());
   }
-  
+
   Future<void> _showHelpVideo() async {
     final controller = VideoPlayerController.asset('assets/videos/help.mp4');
 
@@ -161,11 +164,11 @@ class _HomePageState extends State<HomePage> {
         context: context,
         barrierDismissible: false,
         builder: (dialogContext) => AlertDialog(
-          backgroundColor: const Color(0xFF222831),
+          backgroundColor: _bg,
           title: Text(
             isTurkish ? "Nasıl Kullanılır" : "How to Use",
             style: TextStyle(
-              color: const Color(0xFFDFD0B8),
+              color: _ink,
               fontSize: ResponsiveHelper.fontSize(context, 16),
             ),
           ),
@@ -187,7 +190,7 @@ class _HomePageState extends State<HomePage> {
               child: Text(
                 isTurkish ? "Kapat" : "Close",
                 style: TextStyle(
-                  color: const Color(0xFFDFD0B8),
+                  color: _ink,
                   fontSize: ResponsiveHelper.fontSize(context, 14),
                 ),
               ),
@@ -199,7 +202,6 @@ class _HomePageState extends State<HomePage> {
       controller.dispose();
     }
   }
-  
 
   Future<void> _shareOnWhatsApp(String message) async {
     final url = Uri.parse("https://wa.me/?text=${Uri.encodeComponent(message)}");
@@ -208,15 +210,115 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  Widget _buildRingArea({
+    required double maxDiameterDp,
+    required double currentDiameterDp,
+  }) {
+    // Görsel simetri: sol/sağ buton alanlarını eşitle
+    const double sideSlotWidth = 64.0;
+    const double iconSize = 45.0;
+
+    // İç stroke
+    const double ringStrokeWidth = 1.8;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        SizedBox(
+          width: sideSlotWidth,
+          child: Center(
+            child: IconButton(
+              onPressed: _showHelpVideo,
+              icon: SvgPicture.asset(
+                "assets/icons/help.svg",
+                width: iconSize,
+                height: iconSize,
+                colorFilter: const ColorFilter.mode(_ink, BlendMode.srcIn),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+
+        // Orta alan: kalan alan kadar büyüsün/küçülsün (overflow yok)
+        Expanded(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // Row'un orta kısmında bize kalan maksimum boyut.
+              // Ring alanı kare olmalı, o yüzden min(width, height).
+              final maxSquare = constraints.biggest.shortestSide;
+
+              // grid_box görseli için kullanılacak kare boyutu:
+              // - Hesaplanan maxDiameterDp'yi KORU
+              // - Ama UI constraint'ini aşma (clamp)
+              final gridSize = maxDiameterDp.clamp(0.0, maxSquare);
+
+              // Ring çapı da aynı şekilde grid boyutunu aşmasın
+              final ringSize = currentDiameterDp.clamp(0.0, gridSize);
+
+              return Center(
+                child: SizedBox(
+                  width: gridSize,
+                  height: gridSize,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      SvgPicture.asset(
+                        "assets/icons/grid_box.svg",
+                        width: gridSize,
+                        height: gridSize,
+                        fit: BoxFit.contain,
+                        colorFilter: const ColorFilter.mode(_ink, BlendMode.srcIn),
+                      ),
+                      SizedBox(
+                        width: ringSize,
+                        height: ringSize,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.fromBorderSide(
+                              const BorderSide(
+                                color: _ink,
+                                width: ringStrokeWidth,
+                                strokeAlign: BorderSide.strokeAlignInside,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+
+        const SizedBox(width: 8),
+        SizedBox(
+          width: sideSlotWidth,
+          child: Center(
+            child: IconButton(
+              onPressed: () {
+                // Bu fonksiyon çağrıldığı yerde closestIndex hesaplı; burada kapalı tutuyoruz
+              },
+              icon: const SizedBox.shrink(),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (dpi["xdpi"] == 0.0) {
       // ✅ Review'da "boş ekran" gibi görünmesin
       return const Scaffold(
-        backgroundColor: Color(0xFF222831),
+        backgroundColor: _bg,
         body: Center(
           child: CircularProgressIndicator(
-            color: Color(0xFFDFD0B8),
+            color: _ink,
           ),
         ),
       );
@@ -237,7 +339,7 @@ class _HomePageState extends State<HomePage> {
     final isCompact = ResponsiveHelper.isCompactScreen(context);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF222831),
+      backgroundColor: _bg,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
@@ -258,74 +360,127 @@ class _HomePageState extends State<HomePage> {
                     style: GoogleFonts.cinzel(
                       fontSize: ResponsiveHelper.fontSize(context, 28, maxSize: 32),
                       letterSpacing: 4,
-                      color: const Color(0xFFDFD0B8),
+                      color: _ink,
                     ),
                   ),
                 ),
               ),
-              SizedBox(height: ResponsiveHelper.spacing(context, 16)),
+              SizedBox(height: ResponsiveHelper.spacing(context, 12)),
+
+              // Üst ring alanı: taşmayan, simetrik düzen
               Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  IconButton(
-                    onPressed: _showHelpVideo,
-                    icon: SvgPicture.asset(
-                      "assets/icons/help.svg",
-                      width: 45,
-                      height: 45,
-                      colorFilter: const ColorFilter.mode(Color(0xFFDFD0B8), BlendMode.srcIn),
+                  // Sol slot
+                  const SizedBox(width: 64),
+                  const SizedBox(width: 8),
+
+                  // Orta alan
+                  Expanded(
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final maxSquare = constraints.biggest.shortestSide;
+                        final gridSize = maxDiameterDp.clamp(0.0, maxSquare);
+                        final ringSize = currentDiameterDp.clamp(0.0, gridSize);
+
+                        return Center(
+                          child: SizedBox(
+                            width: gridSize,
+                            height: gridSize,
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                SvgPicture.asset(
+                                  "assets/icons/grid_box.svg",
+                                  width: gridSize,
+                                  height: gridSize,
+                                  fit: BoxFit.contain,
+                                  colorFilter: const ColorFilter.mode(_ink, BlendMode.srcIn),
+                                ),
+                                SizedBox(
+                                  width: ringSize,
+                                  height: ringSize,
+                                  child: DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.fromBorderSide(
+                                        const BorderSide(
+                                          color: _ink,
+                                          width: 1.8,
+                                          strokeAlign: BorderSide.strokeAlignInside,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ),
-                  const SizedBox(width: 24),
-                  Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      SvgPicture.asset(
-                        "assets/icons/grid_box.svg",
-                        width: maxDiameterDp,
-                        height: maxDiameterDp,
-                        fit: BoxFit.contain,
-                        colorFilter: const ColorFilter.mode(Color(0xFFDFD0B8), BlendMode.srcIn),
-                      ),
-                      Container(
-                        width: currentDiameterDp,
-                        height: currentDiameterDp,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: const Color(0xFFDFD0B8), width: 1.8),
+
+                  const SizedBox(width: 8),
+                  const SizedBox(width: 64),
+                ],
+              ),
+
+              // Butonları ve merkezi alanı tek satırda taşırmak yerine:
+              // Üstte simetrik ring alanı, altta aksiyon butonları.
+              // Bu hem estetik hem de küçük ekranda güvenli.
+              SizedBox(height: ResponsiveHelper.spacing(context, 10)),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  SizedBox(
+                    width: 64,
+                    child: Center(
+                      child: IconButton(
+                        onPressed: _showHelpVideo,
+                        icon: SvgPicture.asset(
+                          "assets/icons/help.svg",
+                          width: 45,
+                          height: 45,
+                          colorFilter: const ColorFilter.mode(_ink, BlendMode.srcIn),
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                  const SizedBox(width: 24),
-                  IconButton(
-                    onPressed: () {
-                      final item = sizeChart[closestIndex];
-                      final message = isTurkish
-                          ? "Yüzük ölçüm sonucu:\nÖlçü: ${item['eu']}\nÇap: ${item['diameter']} mm\nÇevre: ${item['circumference']} mm"
-                          : "Ring size result:\nSize: ${item['eu']}\nDiameter: ${item['diameter']} mm\nCircumference: ${item['circumference']} mm";
-                      _shareOnWhatsApp(message);
-                    },
-                    icon: SvgPicture.asset(
-                      "assets/icons/forward.svg",
-                      width: 45,
-                      height: 45,
-                      colorFilter: const ColorFilter.mode(Color(0xFFDFD0B8), BlendMode.srcIn),
+                  SizedBox(
+                    width: 64,
+                    child: Center(
+                      child: IconButton(
+                        onPressed: () {
+                          final item = sizeChart[closestIndex];
+                          final message = isTurkish
+                              ? "Yüzük ölçüm sonucu:\nÖlçü: ${item['eu']}\nÇap: ${item['diameter']} mm\nÇevre: ${item['circumference']} mm"
+                              : "Ring size result:\nSize: ${item['eu']}\nDiameter: ${item['diameter']} mm\nCircumference: ${item['circumference']} mm";
+                          _shareOnWhatsApp(message);
+                        },
+                        icon: SvgPicture.asset(
+                          "assets/icons/forward.svg",
+                          width: 45,
+                          height: 45,
+                          colorFilter: const ColorFilter.mode(_ink, BlendMode.srcIn),
+                        ),
+                      ),
                     ),
                   ),
                 ],
               ),
-              SizedBox(height: ResponsiveHelper.spacing(context, 16)),
+
+              SizedBox(height: ResponsiveHelper.spacing(context, 12)),
               Row(
                 children: [
                   IconButton(
                     onPressed: _stepBackward,
-                    icon: const Icon(Icons.chevron_left, color: Color(0xFFDFD0B8)),
+                    icon: const Icon(Icons.chevron_left, color: _ink),
                   ),
                   Expanded(
                     child: Slider(
-                      activeColor: const Color(0xFFDFD0B8),
-                      inactiveColor: const Color(0xFFDFD0B8).withValues(alpha: 0.6),
+                      activeColor: _ink,
+                      inactiveColor: _ink.withValues(alpha: 0.6),
                       value: diameterMm,
                       min: minDiameter,
                       max: maxDiameter,
@@ -339,7 +494,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                   IconButton(
                     onPressed: _stepForward,
-                    icon: const Icon(Icons.chevron_right, color: Color(0xFFDFD0B8)),
+                    icon: const Icon(Icons.chevron_right, color: _ink),
                   ),
                 ],
               ),
@@ -351,7 +506,7 @@ class _HomePageState extends State<HomePage> {
                   child: Text(
                     isTurkish ? "Ölçü Tablosu" : "Size Chart",
                     style: TextStyle(
-                      color: const Color(0xFFDFD0B8),
+                      color: _ink,
                       fontSize: ResponsiveHelper.fontSize(context, 18),
                     ),
                   ),
@@ -366,7 +521,7 @@ class _HomePageState extends State<HomePage> {
                   decoration: BoxDecoration(
                     border: Border(
                       bottom: BorderSide(
-                        color: const Color(0xFFDFD0B8).withValues(alpha: 0.75),
+                        color: _ink.withValues(alpha: 0.75),
                         width: 1,
                       ),
                     ),
@@ -377,7 +532,7 @@ class _HomePageState extends State<HomePage> {
                         child: Text(
                           isTurkish ? "Ölçü" : "Size",
                           style: TextStyle(
-                            color: const Color(0xFFDFD0B8),
+                            color: _ink,
                             fontWeight: FontWeight.w600,
                             fontSize: ResponsiveHelper.fontSize(context, 10),
                           ),
@@ -388,7 +543,7 @@ class _HomePageState extends State<HomePage> {
                           child: Text(
                             isTurkish ? "Çap" : "Diameter",
                             style: TextStyle(
-                              color: const Color(0xFFDFD0B8),
+                              color: _ink,
                               fontWeight: FontWeight.w600,
                               fontSize: ResponsiveHelper.fontSize(context, 10),
                             ),
@@ -401,7 +556,7 @@ class _HomePageState extends State<HomePage> {
                           child: Text(
                             isTurkish ? "Çevre" : "Circumference",
                             style: TextStyle(
-                              color: const Color(0xFFDFD0B8),
+                              color: _ink,
                               fontWeight: FontWeight.w600,
                               fontSize: ResponsiveHelper.fontSize(context, 10),
                             ),
@@ -432,9 +587,9 @@ class _HomePageState extends State<HomePage> {
                         margin: EdgeInsets.symmetric(horizontal: 16, vertical: isCompact ? 4 : 6),
                         padding: EdgeInsets.symmetric(horizontal: 16, vertical: isCompact ? 10 : 12),
                         decoration: BoxDecoration(
-                          border: Border.all(color: const Color(0xFFDFD0B8)),
+                          border: Border.all(color: _ink),
                           borderRadius: BorderRadius.circular(8),
-                          color: isSelected ? const Color(0xFFDFD0B8).withValues(alpha: 0.1) : Colors.transparent,
+                          color: isSelected ? _ink.withValues(alpha: 0.1) : Colors.transparent,
                         ),
                         child: Row(
                           children: [
@@ -442,7 +597,7 @@ class _HomePageState extends State<HomePage> {
                               child: Text(
                                 "${item['eu']}",
                                 style: TextStyle(
-                                  color: const Color(0xFFDFD0B8),
+                                  color: _ink,
                                   fontSize: ResponsiveHelper.fontSize(context, 18),
                                 ),
                               ),
@@ -452,7 +607,7 @@ class _HomePageState extends State<HomePage> {
                                 child: Text(
                                   "${item['diameter']}",
                                   style: TextStyle(
-                                    color: const Color(0xFFDFD0B8),
+                                    color: _ink,
                                     fontSize: ResponsiveHelper.fontSize(context, 18),
                                   ),
                                 ),
@@ -464,7 +619,7 @@ class _HomePageState extends State<HomePage> {
                                 child: Text(
                                   "${item['circumference']}",
                                   style: TextStyle(
-                                    color: const Color(0xFFDFD0B8),
+                                    color: _ink,
                                     fontSize: ResponsiveHelper.fontSize(context, 18),
                                   ),
                                 ),
@@ -487,7 +642,8 @@ class _HomePageState extends State<HomePage> {
                   children: [
                     InkWell(
                       onTap: () async {
-                        final url = Uri.parse("https://www.instagram.com/balladeart?igsh=Z3B6bHV5OWd4MXFw");
+                        final url =
+                            Uri.parse("https://www.instagram.com/balladeart?igsh=Z3B6bHV5OWd4MXFw");
                         if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
                           debugPrint("❌ Instagram linki açılamadı: $url");
                         }
@@ -495,7 +651,7 @@ class _HomePageState extends State<HomePage> {
                       child: SvgPicture.asset(
                         "assets/icons/insta.svg",
                         width: 32,
-                        colorFilter: const ColorFilter.mode(Color(0xFFDFD0B8), BlendMode.srcIn),
+                        colorFilter: const ColorFilter.mode(_ink, BlendMode.srcIn),
                       ),
                     ),
                     InkWell(
@@ -508,7 +664,7 @@ class _HomePageState extends State<HomePage> {
                       child: SvgPicture.asset(
                         "assets/icons/website.svg",
                         width: 32,
-                        colorFilter: const ColorFilter.mode(Color(0xFFDFD0B8), BlendMode.srcIn),
+                        colorFilter: const ColorFilter.mode(_ink, BlendMode.srcIn),
                       ),
                     ),
                     InkWell(
@@ -521,7 +677,7 @@ class _HomePageState extends State<HomePage> {
                       child: SvgPicture.asset(
                         "assets/icons/location.svg",
                         width: 30,
-                        colorFilter: const ColorFilter.mode(Color(0xFFDFD0B8), BlendMode.srcIn),
+                        colorFilter: const ColorFilter.mode(_ink, BlendMode.srcIn),
                       ),
                     ),
                   ],
