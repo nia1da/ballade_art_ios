@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'home_page.dart';
 import 'dpi_helper.dart';
 
@@ -73,11 +72,11 @@ class _MyAppState extends State<MyApp> {
       title: 'BalladeArt',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
+        fontFamily: 'Cinzel',
         primarySwatch: Colors.grey,
         visualDensity: VisualDensity.adaptivePlatformDensity,
-        textTheme: GoogleFonts.cinzelTextTheme(
-          ThemeData.light().textTheme,
-        ).apply(
+        textTheme: ThemeData.light().textTheme.apply(
+          fontFamily: 'Cinzel',
           bodyColor: const Color(0xFFDFD0B8),
           displayColor: const Color(0xFFDFD0B8),
         ),

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'responsive_helper.dart';
 
 class StoryPage extends StatefulWidget {
@@ -98,14 +97,16 @@ class _StoryPageState extends State<StoryPage> {
     const Color bg = Color(0xFF222831);
     const Color ink = Color(0xFFDFD0B8);
 
-    final headerStyle = GoogleFonts.cinzel(
+    final headerStyle = TextStyle(
+      fontFamily: 'Cinzel',
       color: ink,
       fontSize: ResponsiveHelper.fontSize(context, 22, maxSize: 26),
       fontWeight: FontWeight.bold,
       letterSpacing: 2,
     );
 
-    final bodyStyle = GoogleFonts.cinzel(
+    final bodyStyle = TextStyle(
+      fontFamily: 'Cinzel',
       color: ink.withValues(alpha: 0.9),
       fontSize: ResponsiveHelper.fontSize(context, 15, maxSize: 17),
       height: 1.6,
