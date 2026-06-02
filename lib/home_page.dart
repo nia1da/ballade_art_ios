@@ -108,6 +108,12 @@ class _HomePageState extends State<HomePage> {
     _loadDpi();
   }
 
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadDpi() async {
     final result = await DpiHelper.getDpi();
     if (!mounted) return;
@@ -115,6 +121,8 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _scrollToSelected() {
+    if (!mounted || !_scrollController.hasClients) return;
+
     final index = sizeChart.indexed.reduce(
       (a, b) =>
           (a.$2['diameter'] - diameterMm).abs() < (b.$2['diameter'] - diameterMm).abs() ? a : b,
@@ -197,6 +205,17 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       );
+    } catch (e) {
+      debugPrint('Help video error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              isTurkish ? "Video açılamadı." : "Unable to play the video.",
+            ),
+          ),
+        );
+      }
     } finally {
       controller.dispose();
     }
