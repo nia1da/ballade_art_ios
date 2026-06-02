@@ -35,7 +35,7 @@ class _StoryPageState extends State<StoryPage> {
         "en": {
           "title": "THE MASTER'S HAND",
           "text":
-              "am Alper Karabak. I studied Jewelry Design in high school and university. For twenty-seven years, I have been practicing my profession with the same excitement as the first day. In 2012, I founded BalladeArt, inspired by a Chopin piece I love. I named my workshop 'Ballade' believing that people's stories can be expressed not just through music, but through visual arts as well."
+              "I am Alper Karabak. I studied Jewelry Design in high school and university. For twenty-seven years, I have been practicing my profession with the same excitement as the first day. In 2012, I founded BalladeArt, inspired by a Chopin piece I love. I named my workshop 'Ballade' believing that people's stories can be expressed not just through music, but through visual arts as well."
         }
       },
       {
@@ -64,7 +64,7 @@ class _StoryPageState extends State<StoryPage> {
         "tr": {
           "title": "SAF ZANAAT",
           "text":
-              "We work on rings, necklaces, crowns, belt buckles, and minimal sculptures, pushing the boundaries with precious metals and stones. We generally do not use 3D modeling; we work with our minds, experience, and hands. Our character is defined by designs with an antique look, matte textures, and a sense of history."
+              "Yüzükler, kolyeler, taçlar, kemer tokaları ve minimal heykeller üzerinde çalışıyor; kıymetli metaller ve taşlarla sınırları zorluyoruz. Genellikle 3D modelleme kullanmıyoruz; zihnimizle, deneyimimizle ve ellerimizle çalışıyoruz. Antik görünümlü tasarımlar, mat dokular ve bir tarih hissi karakterimizi tanımlıyor."
         },
         "en": {
           "title": "PURE CRAFT",
@@ -325,3 +325,4 @@ class _InteractiveStoryCardState extends State<InteractiveStoryCard> {
     );
   }
 }
+

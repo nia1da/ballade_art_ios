@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -89,6 +90,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final ScrollController _scrollController = ScrollController();
+  Timer? _scrollDebounce;
 
   double diameterMm = 13.0;
   final double minDiameter = 13.0;
@@ -110,6 +112,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
+    _scrollDebounce?.cancel();
     _scrollController.dispose();
     super.dispose();
   }
@@ -120,26 +123,32 @@ class _HomePageState extends State<HomePage> {
     setState(() => dpi = result);
   }
 
+  // itemExtent değerleriyle senkronize olmalı
+  static const double _itemExtentNormal = 56.0;
+  static const double _itemExtentCompact = 46.0;
+
   void _scrollToSelected() {
     if (!mounted || !_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    if (position.viewportDimension == 0) return;
 
     final index = sizeChart.indexed.reduce(
       (a, b) =>
           (a.$2['diameter'] - diameterMm).abs() < (b.$2['diameter'] - diameterMm).abs() ? a : b,
     ).$1;
 
-    const double itemHeight = 64.0;
-    final scrollOffset = _scrollController.offset;
-    final viewHeight = _scrollController.position.viewportDimension;
-    final targetOffset = index * itemHeight;
+    final itemExtent = ResponsiveHelper.isCompactScreen(context)
+        ? _itemExtentCompact
+        : _itemExtentNormal;
 
-    if (targetOffset < scrollOffset || targetOffset > scrollOffset + viewHeight - itemHeight) {
-      _scrollController.animateTo(
-        (targetOffset - viewHeight / 2).clamp(0.0, _scrollController.position.maxScrollExtent),
-        duration: const Duration(milliseconds: 350),
-        curve: Curves.easeOut,
-      );
-    }
+    final targetOffset = (index * itemExtent - position.viewportDimension / 2 + itemExtent / 2)
+        .clamp(0.0, position.maxScrollExtent);
+
+    _scrollController.animateTo(
+      targetOffset,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
+    );
   }
 
   void _stepBackward() {
@@ -228,106 +237,6 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Widget _buildRingArea({
-    required double maxDiameterDp,
-    required double currentDiameterDp,
-  }) {
-    // Görsel simetri: sol/sağ buton alanlarını eşitle
-    const double sideSlotWidth = 64.0;
-    const double iconSize = 45.0;
-
-    // İç stroke
-    const double ringStrokeWidth = 1.8;
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        SizedBox(
-          width: sideSlotWidth,
-          child: Center(
-            child: IconButton(
-              onPressed: _showHelpVideo,
-              icon: SvgPicture.asset(
-                "assets/icons/help.svg",
-                width: iconSize,
-                height: iconSize,
-                colorFilter: const ColorFilter.mode(_ink, BlendMode.srcIn),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-
-        // Orta alan: kalan alan kadar büyüsün/küçülsün (overflow yok)
-        Expanded(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              // Row'un orta kısmında bize kalan maksimum boyut.
-              // Ring alanı kare olmalı, o yüzden min(width, height).
-              final maxSquare = constraints.biggest.shortestSide;
-
-              // grid_box görseli için kullanılacak kare boyutu:
-              // - Hesaplanan maxDiameterDp'yi KORU
-              // - Ama UI constraint'ini aşma (clamp)
-              final gridSize = maxDiameterDp.clamp(0.0, maxSquare);
-
-              // Ring çapı da aynı şekilde grid boyutunu aşmasın
-              final ringSize = currentDiameterDp.clamp(0.0, gridSize);
-
-              return Center(
-                child: SizedBox(
-                  width: gridSize,
-                  height: gridSize,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      SvgPicture.asset(
-                        "assets/icons/grid_box.svg",
-                        width: gridSize,
-                        height: gridSize,
-                        fit: BoxFit.contain,
-                        colorFilter: const ColorFilter.mode(_ink, BlendMode.srcIn),
-                      ),
-                      SizedBox(
-                        width: ringSize,
-                        height: ringSize,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.fromBorderSide(
-                              const BorderSide(
-                                color: _ink,
-                                width: ringStrokeWidth,
-                                strokeAlign: BorderSide.strokeAlignInside,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-
-        const SizedBox(width: 8),
-        SizedBox(
-          width: sideSlotWidth,
-          child: Center(
-            child: IconButton(
-              onPressed: () {
-                // Bu fonksiyon çağrıldığı yerde closestIndex hesaplı; burada kapalı tutuyoruz
-              },
-              icon: const SizedBox.shrink(),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     if (dpi["xdpi"] == 0.0) {
@@ -356,23 +265,27 @@ class _HomePageState extends State<HomePage> {
 
     final isCompact = ResponsiveHelper.isCompactScreen(context);
 
+    const double hPad = 20.0;
+    const double actionSlot = 64.0;
+    const double actionIconSize = 45.0;
+
     return Scaffold(
       backgroundColor: _bg,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-          child: Column(
-            children: [
-              SizedBox(height: ResponsiveHelper.spacing(context, 4)),
-              InkWell(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const StoryPage()),
-                  );
-                },
+        child: Column(
+          children: [
+            SizedBox(height: ResponsiveHelper.spacing(context, 8)),
+
+            // ── Başlık ──────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: hPad),
+              child: InkWell(
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const StoryPage()),
+                ),
                 child: Padding(
-                  padding: const EdgeInsets.all(4.0),
+                  padding: const EdgeInsets.symmetric(vertical: 4),
                   child: Text(
                     "BALLADEART",
                     style: TextStyle(
@@ -384,17 +297,34 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
               ),
-              SizedBox(height: ResponsiveHelper.spacing(context, 12)),
+            ),
 
-              // Üst ring alanı: taşmayan, simetrik düzen
-              Row(
+            SizedBox(height: ResponsiveHelper.spacing(context, 16)),
+
+            // ── Ring alanı: sol=yardım | orta=ring | sağ=paylaş ────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: hPad),
+              child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Sol slot
-                  const SizedBox(width: 64),
-                  const SizedBox(width: 8),
+                  // Help butonu
+                  SizedBox(
+                    width: actionSlot,
+                    height: actionSlot,
+                    child: IconButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: _showHelpVideo,
+                      icon: SvgPicture.asset(
+                        "assets/icons/help.svg",
+                        width: actionIconSize,
+                        height: actionIconSize,
+                        colorFilter: const ColorFilter.mode(_ink, BlendMode.srcIn),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
 
-                  // Orta alan
+                  // Ring görseli
                   Expanded(
                     child: LayoutBuilder(
                       builder: (context, constraints) {
@@ -419,11 +349,11 @@ class _HomePageState extends State<HomePage> {
                                 SizedBox(
                                   width: ringSize,
                                   height: ringSize,
-                                  child: DecoratedBox(
+                                  child: const DecoratedBox(
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
                                       border: Border.fromBorderSide(
-                                        const BorderSide(
+                                        BorderSide(
                                           color: _ink,
                                           width: 1.8,
                                           strokeAlign: BorderSide.strokeAlignInside,
@@ -440,272 +370,302 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
 
-                  const SizedBox(width: 8),
-                  const SizedBox(width: 64),
-                ],
-              ),
+                  const SizedBox(width: 12),
 
-              // Butonları ve merkezi alanı tek satırda taşırmak yerine:
-              // Üstte simetrik ring alanı, altta aksiyon butonları.
-              // Bu hem estetik hem de küçük ekranda güvenli.
-              SizedBox(height: ResponsiveHelper.spacing(context, 10)),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
+                  // Paylaş butonu
                   SizedBox(
-                    width: 64,
-                    child: Center(
-                      child: IconButton(
-                        onPressed: _showHelpVideo,
-                        icon: SvgPicture.asset(
-                          "assets/icons/help.svg",
-                          width: 45,
-                          height: 45,
-                          colorFilter: const ColorFilter.mode(_ink, BlendMode.srcIn),
-                        ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(
-                    width: 64,
-                    child: Center(
-                      child: IconButton(
-                        onPressed: () {
-                          final item = sizeChart[closestIndex];
-                          final message = isTurkish
-                              ? "Yüzük ölçüm sonucu:\nÖlçü: ${item['eu']}\nÇap: ${item['diameter']} mm\nÇevre: ${item['circumference']} mm"
-                              : "Ring size result:\nSize: ${item['eu']}\nDiameter: ${item['diameter']} mm\nCircumference: ${item['circumference']} mm";
-                          _shareOnWhatsApp(message);
-                        },
-                        icon: SvgPicture.asset(
-                          "assets/icons/forward.svg",
-                          width: 45,
-                          height: 45,
-                          colorFilter: const ColorFilter.mode(_ink, BlendMode.srcIn),
-                        ),
+                    width: actionSlot,
+                    height: actionSlot,
+                    child: IconButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: () {
+                        final item = sizeChart[closestIndex];
+                        final message = isTurkish
+                            ? "Yüzük ölçüm sonucu:\nÖlçü: ${item['eu']}\nÇap: ${item['diameter']} mm\nÇevre: ${item['circumference']} mm"
+                            : "Ring size result:\nSize: ${item['eu']}\nDiameter: ${item['diameter']} mm\nCircumference: ${item['circumference']} mm";
+                        _shareOnWhatsApp(message);
+                      },
+                      icon: SvgPicture.asset(
+                        "assets/icons/forward.svg",
+                        width: actionIconSize,
+                        height: actionIconSize,
+                        colorFilter: const ColorFilter.mode(_ink, BlendMode.srcIn),
                       ),
                     ),
                   ),
                 ],
               ),
+            ),
 
-              SizedBox(height: ResponsiveHelper.spacing(context, 12)),
-              Row(
+            SizedBox(height: ResponsiveHelper.spacing(context, 8)),
+
+            // ── Slider ──────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: hPad - 4),
+              child: Row(
                 children: [
-                  IconButton(
-                    onPressed: _stepBackward,
-                    icon: const Icon(Icons.chevron_left, color: _ink),
+                  SizedBox(
+                    width: 36,
+                    height: 36,
+                    child: IconButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: _stepBackward,
+                      icon: const Icon(Icons.chevron_left, color: _ink),
+                    ),
                   ),
                   Expanded(
                     child: Slider(
                       activeColor: _ink,
-                      inactiveColor: _ink.withValues(alpha: 0.6),
+                      inactiveColor: _ink.withValues(alpha: 0.4),
                       value: diameterMm,
                       min: minDiameter,
                       max: maxDiameter,
                       onChanged: (value) {
-                        setState(() {
-                          diameterMm = value;
-                        });
-                        WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToSelected());
+                        setState(() => diameterMm = value);
+                        _scrollDebounce?.cancel();
+                        _scrollDebounce = Timer(
+                          const Duration(milliseconds: 120),
+                          _scrollToSelected,
+                        );
                       },
                     ),
                   ),
-                  IconButton(
-                    onPressed: _stepForward,
-                    icon: const Icon(Icons.chevron_right, color: _ink),
+                  SizedBox(
+                    width: 36,
+                    height: 36,
+                    child: IconButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: _stepForward,
+                      icon: const Icon(Icons.chevron_right, color: _ink),
+                    ),
                   ),
                 ],
               ),
-              SizedBox(height: ResponsiveHelper.spacing(context, 12)),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    isTurkish ? "Ölçü Tablosu" : "Size Chart",
-                    style: TextStyle(
-                      color: _ink,
-                      fontSize: ResponsiveHelper.fontSize(context, 18),
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(height: ResponsiveHelper.spacing(context, 8)),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 6),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                  decoration: BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(
-                        color: _ink.withValues(alpha: 0.75),
-                        width: 1,
-                      ),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          isTurkish ? "Ölçü" : "Size",
-                          style: TextStyle(
-                            color: _ink,
-                            fontWeight: FontWeight.w600,
-                            fontSize: ResponsiveHelper.fontSize(context, 10),
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: Center(
-                          child: Text(
-                            isTurkish ? "Çap" : "Diameter",
-                            style: TextStyle(
-                              color: _ink,
-                              fontWeight: FontWeight.w600,
-                              fontSize: ResponsiveHelper.fontSize(context, 10),
-                            ),
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: Align(
-                          alignment: Alignment.centerRight,
-                          child: Text(
-                            isTurkish ? "Çevre" : "Circumference",
-                            style: TextStyle(
-                              color: _ink,
-                              fontWeight: FontWeight.w600,
-                              fontSize: ResponsiveHelper.fontSize(context, 10),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              SizedBox(height: ResponsiveHelper.spacing(context, 8)),
-              Expanded(
-                child: ListView.builder(
-                  controller: _scrollController,
-                  itemCount: sizeChart.length,
-                  itemBuilder: (context, index) {
-                    final item = sizeChart[index];
-                    final isSelected = index == closestIndex;
+            ),
 
-                    return GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          diameterMm = item['diameter'];
-                        });
-                        WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToSelected());
-                      },
-                      child: Container(
-                        margin: EdgeInsets.symmetric(horizontal: 16, vertical: isCompact ? 4 : 6),
-                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: isCompact ? 10 : 12),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: _ink),
-                          borderRadius: BorderRadius.circular(8),
-                          color: isSelected ? _ink.withValues(alpha: 0.1) : Colors.transparent,
+            SizedBox(height: ResponsiveHelper.spacing(context, 10)),
+
+            // ── Tablo başlığı ────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: hPad),
+              child: Column(
+                children: [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      isTurkish ? "Ölçü Tablosu" : "Size Chart",
+                      style: TextStyle(
+                        color: _ink,
+                        fontSize: ResponsiveHelper.fontSize(context, 18),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                    decoration: BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(color: _ink.withValues(alpha: 0.5), width: 1),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            isTurkish ? "Ölçü" : "Size",
+                            style: TextStyle(
+                              color: _ink,
+                              fontWeight: FontWeight.w600,
+                              fontSize: ResponsiveHelper.fontSize(context, 10),
+                            ),
+                          ),
                         ),
-                        child: Row(
-                          children: [
-                            Expanded(
+                        Expanded(
+                          child: Center(
+                            child: Text(
+                              isTurkish ? "Çap" : "Diameter",
+                              style: TextStyle(
+                                color: _ink,
+                                fontWeight: FontWeight.w600,
+                                fontSize: ResponsiveHelper.fontSize(context, 10),
+                              ),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Align(
+                            alignment: Alignment.centerRight,
+                            child: Text(
+                              isTurkish ? "Çevre" : "Circumference",
+                              style: TextStyle(
+                                color: _ink,
+                                fontWeight: FontWeight.w600,
+                                fontSize: ResponsiveHelper.fontSize(context, 10),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 6),
+
+            // ── Tablo ────────────────────────────────────────────────
+            Expanded(
+              child: ListView.builder(
+                controller: _scrollController,
+                padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+                itemExtent: isCompact ? _itemExtentCompact : _itemExtentNormal,
+                itemCount: sizeChart.length,
+                itemBuilder: (context, index) {
+                  final item = sizeChart[index];
+                  final isSelected = index == closestIndex;
+
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() => diameterMm = item['diameter']);
+                      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToSelected());
+                    },
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: hPad),
+                      child: Container(
+                      margin: EdgeInsets.symmetric(vertical: isCompact ? 3 : 5),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: isCompact ? 9 : 11,
+                      ),
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: isSelected ? _ink : _ink.withValues(alpha: 0.35),
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                        color: isSelected ? _ink.withValues(alpha: 0.1) : Colors.transparent,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              "${item['eu']}",
+                              style: TextStyle(
+                                color: _ink,
+                                fontSize: ResponsiveHelper.fontSize(context, 17),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Center(
                               child: Text(
-                                "${item['eu']}",
+                                "${item['diameter']}",
                                 style: TextStyle(
                                   color: _ink,
-                                  fontSize: ResponsiveHelper.fontSize(context, 18),
+                                  fontSize: ResponsiveHelper.fontSize(context, 17),
                                 ),
                               ),
                             ),
-                            Expanded(
-                              child: Center(
-                                child: Text(
-                                  "${item['diameter']}",
-                                  style: TextStyle(
-                                    color: _ink,
-                                    fontSize: ResponsiveHelper.fontSize(context, 18),
-                                  ),
+                          ),
+                          Expanded(
+                            child: Align(
+                              alignment: Alignment.centerRight,
+                              child: Text(
+                                "${item['circumference']}",
+                                style: TextStyle(
+                                  color: _ink,
+                                  fontSize: ResponsiveHelper.fontSize(context, 17),
                                 ),
                               ),
                             ),
-                            Expanded(
-                              child: Align(
-                                alignment: Alignment.centerRight,
-                                child: Text(
-                                  "${item['circumference']}",
-                                  style: TextStyle(
-                                    color: _ink,
-                                    fontSize: ResponsiveHelper.fontSize(context, 18),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    );
-                  },
-                ),
+                    ),
+                    ),
+                  );
+                },
               ),
-              Padding(
-                padding: EdgeInsets.only(
-                  bottom: ResponsiveHelper.spacing(context, 0),
-                  top: ResponsiveHelper.spacing(context, 16),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    InkWell(
-                      onTap: () async {
-                        final url =
-                            Uri.parse("https://www.instagram.com/balladeart?igsh=Z3B6bHV5OWd4MXFw");
-                        if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
-                          debugPrint("❌ Instagram linki açılamadı: $url");
-                        }
-                      },
-                      child: SvgPicture.asset(
-                        "assets/icons/insta.svg",
-                        width: 32,
-                        colorFilter: const ColorFilter.mode(_ink, BlendMode.srcIn),
-                      ),
-                    ),
-                    InkWell(
-                      onTap: () async {
-                        final url = Uri.parse("https://www.balladeart.com/");
-                        if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
-                          debugPrint("❌ Website linki açılamadı: $url");
-                        }
-                      },
-                      child: SvgPicture.asset(
-                        "assets/icons/website.svg",
-                        width: 32,
-                        colorFilter: const ColorFilter.mode(_ink, BlendMode.srcIn),
-                      ),
-                    ),
-                    InkWell(
-                      onTap: () async {
-                        final url = Uri.parse("https://maps.app.goo.gl/3FNax1PRdAbcfiPN7");
-                        if (await canLaunchUrl(url)) {
-                          await launchUrl(url, mode: LaunchMode.externalApplication);
-                        }
-                      },
-                      child: SvgPicture.asset(
-                        "assets/icons/location.svg",
-                        width: 30,
-                        colorFilter: const ColorFilter.mode(_ink, BlendMode.srcIn),
-                      ),
-                    ),
-                  ],
-                ),
+            ),
+
+            // ── Footer: sosyal linkler ───────────────────────────────
+            Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: hPad,
+                vertical: ResponsiveHelper.spacing(context, 12),
               ),
-            ],
-          ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _FooterIcon(
+                    asset: "assets/icons/insta.svg",
+                    size: 32,
+                    onTap: () async {
+                      final url = Uri.parse(
+                          "https://www.instagram.com/balladeart?igsh=Z3B6bHV5OWd4MXFw");
+                      if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+                        debugPrint("Instagram linki açılamadı: $url");
+                      }
+                    },
+                  ),
+                  const SizedBox(width: 40),
+                  _FooterIcon(
+                    asset: "assets/icons/website.svg",
+                    size: 32,
+                    onTap: () async {
+                      final url = Uri.parse("https://www.balladeart.com/");
+                      if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+                        debugPrint("Website linki açılamadı: $url");
+                      }
+                    },
+                  ),
+                  const SizedBox(width: 40),
+                  _FooterIcon(
+                    asset: "assets/icons/location.svg",
+                    size: 30,
+                    onTap: () async {
+                      final url = Uri.parse("https://maps.app.goo.gl/3FNax1PRdAbcfiPN7");
+                      if (await canLaunchUrl(url)) {
+                        await launchUrl(url, mode: LaunchMode.externalApplication);
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
+
+class _FooterIcon extends StatelessWidget {
+  final String asset;
+  final double size;
+  final VoidCallback onTap;
+
+  const _FooterIcon({
+    required this.asset,
+    required this.size,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: SvgPicture.asset(
+          asset,
+          width: size,
+          height: size,
+          colorFilter: const ColorFilter.mode(Color(0xFFDFD0B8), BlendMode.srcIn),
+        ),
+      ),
+    );
+  }
+}
+

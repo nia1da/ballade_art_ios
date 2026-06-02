@@ -30,6 +30,7 @@
 	<array>
 		<string>mailto</string>
 		<string>instagram</string>
+		<string>whatsapp</string>
 	</array>
 
 	<key>LSRequiresIPhoneOS</key>
